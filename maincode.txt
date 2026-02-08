@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12x12 网格游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(12, 1fr);
+            gap: 2px;
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 600px;
+            max-height: 600px;
+            background-color: #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .grid-cell {
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .grid-cell:hover {
+            transform: scale(1.05);
+        }
+        .grid-cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        .grid-cell.eliminating {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        .grid-cell.falling {
+            transition: transform 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>12x12 网格游戏</h1>
+    <div class="game-board" id="gameBoard"></div>
+    
+    <script>
+        // 图片路径数组
+        const images = [
+            'write.png',
+            'green.png',
+            'blue.png',
+            'yellow.png',
+            'red.png'
+        ];
+        
+        // 图片名称到索引的映射
+        const imageToIndex = {
+            'write.png': 0,
+            'green.png': 1,
+            'blue.png': 2,
+            'yellow.png': 3,
+            'red.png': 4
+        };
+        
+        // 网格大小
+        const gridSize = 12;
+        
+        // 获取游戏板元素
+        const gameBoard = document.getElementById('gameBoard');
+        
+        // 存储网格状态
+        let grid = [];
+        
+        // 存储点击序列
+        let clickSequence = [];
+        
+        // 有效的消除序列
+        const validSequence = ['write.png', 'blue.png', 'green.png', 'yellow.png'];
+        
+        // 检查是否有四个及以上相同图片相邻
+        function hasFourInARow(row, col, image, grid) {
+            // 检查水平方向
+            let count = 1;
+            for (let j = col - 1; j >= 0; j--) {
+                if (grid[row] && grid[row][j] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            for (let j = col + 1; j < gridSize; j++) {
+                if (grid[row] && grid[row][j] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            if (count >= 4) return true;
+            
+            // 检查垂直方向
+            count = 1;
+            for (let i = row - 1; i >= 0; i--) {
+                if (grid[i] && grid[i][col] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            for (let i = row + 1; i < gridSize; i++) {
+                if (grid[i] && grid[i][col] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            if (count >= 4) return true;
+            
+            return false;
+        }
+        
+        // 初始化网格
+        function initGrid() {
+            // 清空游戏板
+            gameBoard.innerHTML = '';
+            grid = [];
+            
+            // 生成网格
+            for (let i = 0; i < gridSize; i++) {
+                grid[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    // 创建格子元素
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // 随机选择一张图片，确保不会出现四个及以上相同图片相邻
+                    let randomImage;
+                    let validImage = false;
+                    
+                    while (!validImage) {
+                        randomImage = images[Math.floor(Math.random() * images.length)];
+                        validImage = true;
+                        
+                        // 检查是否有四个及以上相同图片相邻
+                        if (hasFourInARow(i, j, randomImage, grid)) {
+                            validImage = false;
+                        }
+                    }
+                    
+                    grid[i][j] = randomImage;
+                    
+                    // 创建图片元素
+                    const img = document.createElement('img');
+                    img.src = randomImage;
+                    img.alt = '游戏图片';
+                    
+                    // 将图片添加到格子中
+                    cell.appendChild(img);
+                    
+                    // 添加点击事件
+                    cell.addEventListener('click', () => handleCellClick(i, j));
+                    
+                    // 将格子添加到游戏板中
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+        
+        // 处理单元格点击
+        function handleCellClick(row, col) {
+            const currentImage = grid[row][col];
+            const cell = getCellElement(row, col);
+            
+            // 检查是否是有效的序列
+            if (clickSequence.length === 0) {
+                // 第一个点击必须是白色
+                if (currentImage === 'write.png') {
+                    // 查找所有相邻的白色图片
+                    const whiteCells = findAllAdjacentSameColor(row, col, currentImage);
+                    whiteCells.forEach(item => {
+                        clickSequence.push(item);
+                        const whiteCell = getCellElement(item.row, item.col);
+                        highlightCell(whiteCell);
+                    });
+                }
+            } else {
+                // 确定当前序列中已经包含的颜色种类
+                const includedColors = [...new Set(clickSequence.map(item => item.image))];
+                // 确定当前应该选择的颜色
+                const expectedColorIndex = includedColors.length;
+                const expectedColor = validSequence[expectedColorIndex];
+                
+                // 检查点击的图片是否是当前应该选择的颜色
+                if (currentImage !== expectedColor) {
+                    // 重置序列
+                    resetSequence();
+                    return;
+                }
+                
+                // 检查是否与最后一个选中的同色单元格相邻
+                // 首先找出所有已选中的最后一种颜色的单元格
+                const lastColor = includedColors[includedColors.length - 1];
+                const lastColorCells = clickSequence.filter(item => item.image === lastColor);
+                
+                // 检查是否与任何一个最后颜色的单元格相邻
+                const isAdjacentToLastColor = lastColorCells.some(selected => 
+                    isAdjacent(selected.row, selected.col, row, col)
+                );
+                
+                if (isAdjacentToLastColor) {
+                    // 查找所有相邻的相同颜色图片
+                    const sameColorCells = findAllAdjacentSameColor(row, col, currentImage);
+                    sameColorCells.forEach(item => {
+                        // 确保不重复添加
+                        if (!clickSequence.some(selected => 
+                            selected.row === item.row && selected.col === item.col
+                        )) {
+                            clickSequence.push(item);
+                            const colorCell = getCellElement(item.row, item.col);
+                            highlightCell(colorCell);
+                        }
+                    });
+                    
+                    // 检查是否完成了整个序列
+                    const updatedIncludedColors = [...new Set(clickSequence.map(item => item.image))];
+                    if (updatedIncludedColors.length >= validSequence.length) {
+                        // 检查是否至少有一个白色、蓝色、绿色和黄色图片
+                        const hasWhite = clickSequence.some(item => item.image === 'write.png');
+                        const hasBlue = clickSequence.some(item => item.image === 'blue.png');
+                        const hasGreen = clickSequence.some(item => item.image === 'green.png');
+                        const hasYellow = clickSequence.some(item => item.image === 'yellow.png');
+                        
+                        if (hasWhite && hasBlue && hasGreen && hasYellow) {
+                            eliminateSequence();
+                        }
+                    }
+                } else {
+                    // 重置序列
+                    resetSequence();
+                }
+            }
+        }
+        
+        // 检查两个单元格是否相邻
+        function isAdjacent(row1, col1, row2, col2) {
+            const rowDiff = Math.abs(row1 - row2);
+            const colDiff = Math.abs(col1 - col2);
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+        
+        // 高亮单元格
+        function highlightCell(cell) {
+            cell.style.border = '2px solid #ff0';
+        }
+        
+        // 重置点击序列
+        function resetSequence() {
+            // 移除所有高亮
+            clickSequence.forEach(item => {
+                const cell = getCellElement(item.row, item.col);
+                cell.style.border = '';
+            });
+            clickSequence = [];
+        }
+        
+        // 消除序列
+        function eliminateSequence() {
+            // 收集要消除的单元格
+            const cellsToEliminate = [...clickSequence];
+            
+            // 检查周围的红色图片
+            clickSequence.forEach(item => {
+                const redCells = findAdjacentRed(item.row, item.col);
+                redCells.forEach(redCell => {
+                    // 检查是否已经在消除列表中
+                    if (!cellsToEliminate.some(cell => cell.row === redCell.row && cell.col === redCell.col)) {
+                        cellsToEliminate.push(redCell);
+                    }
+                });
+            });
+            
+            // 执行消除动画
+            cellsToEliminate.forEach(item => {
+                const cell = getCellElement(item.row, item.col);
+                cell.classList.add('eliminating');
+            });
+            
+            // 延迟执行下落和填充
+            setTimeout(() => {
+                // 标记要消除的位置
+                const eliminated = Array(gridSize).fill().map(() => Array(gridSize).fill(false));
+                cellsToEliminate.forEach(item => {
+                    eliminated[item.row][item.col] = true;
+                });
+                
+                // 执行下落
+                dropCells(eliminated);
+                
+                // 填充新图片
+                fillNewCells();
+                
+                // 重置序列
+                resetSequence();
+            }, 300);
+        }
+        
+        // 查找相邻的红色图片
+        function findAdjacentRed(row, col) {
+            const redCells = [];
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            directions.forEach(([dr, dc]) => {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                
+                if (isValidPosition(newRow, newCol) && grid[newRow][newCol] === 'red.png') {
+                    redCells.push({ row: newRow, col: newCol, image: 'red.png' });
+                }
+            });
+            
+            return redCells;
+        }
+        
+        // 查找所有相邻的相同颜色图片（使用深度优先搜索）
+        function findAllAdjacentSameColor(row, col, color) {
+            const result = [];
+            const visited = Array(gridSize).fill().map(() => Array(gridSize).fill(false));
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            function dfs(r, c) {
+                if (!isValidPosition(r, c) || visited[r][c] || grid[r][c] !== color) {
+                    return;
+                }
+                
+                visited[r][c] = true;
+                result.push({ row: r, col: c, image: color });
+                
+                directions.forEach(([dr, dc]) => {
+                    dfs(r + dr, c + dc);
+                });
+            }
+            
+            dfs(row, col);
+            return result;
+        }
+        
+        // 检查位置是否有效
+        function isValidPosition(row, col) {
+            return row >= 0 && row < gridSize && col >= 0 && col < gridSize;
+        }
+        
+        // 获取单元格元素
+        function getCellElement(row, col) {
+            return document.querySelector(`.grid-cell[data-row="${row}"][data-col="${col}"]`);
+        }
+        
+        // 执行单元格下落
+        function dropCells(eliminated) {
+            // 按列处理
+            for (let j = 0; j < gridSize; j++) {
+                // 从下往上处理，收集未被消除的图片
+                const columnImages = [];
+                for (let i = gridSize - 1; i >= 0; i--) {
+                    if (!eliminated[i][j]) {
+                        columnImages.push(grid[i][j]);
+                    }
+                }
+                
+                // 从底部开始填充列
+                let currentIndex = 0;
+                for (let i = gridSize - 1; i >= 0; i--) {
+                    if (currentIndex < columnImages.length) {
+                        grid[i][j] = columnImages[currentIndex];
+                        const cell = getCellElement(i, j);
+                        cell.classList.remove('eliminating');
+                        const img = cell.querySelector('img');
+                        img.src = columnImages[currentIndex];
+                        img.style.position = 'relative';
+                        img.style.zIndex = '2';
+                        currentIndex++;
+                    } else {
+                        // 顶部空缺标记为null
+                        grid[i][j] = null;
+                    }
+                }
+            }
+        }
+        
+        // 填充新单元格
+        function fillNewCells() {
+            for (let j = 0; j < gridSize; j++) {
+                for (let i = 0; i < gridSize; i++) {
+                    if (grid[i][j] === null) {
+                        // 随机选择一张图片
+                        const randomImage = images[Math.floor(Math.random() * images.length)];
+                        grid[i][j] = randomImage;
+                        
+                        // 更新图片
+                        const cell = getCellElement(i, j);
+                        if (cell) {
+                            // 重置单元格状态
+                            cell.classList.remove('eliminating');
+                            cell.style.opacity = '1';
+                            cell.style.transform = 'scale(1)';
+                            
+                            // 移除所有子元素
+                            cell.innerHTML = '';
+                            
+                            // 创建新的图片元素
+                            const img = document.createElement('img');
+                            img.src = randomImage;
+                            img.alt = '游戏图片';
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+                            img.style.position = 'relative';
+                            img.style.zIndex = '2';
+                            img.style.transition = 'all 0.3s ease';
+                            
+                            // 添加新图片到单元格
+                            cell.appendChild(img);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 初始化游戏
+        initGrid();
+    </script>
+</body>
+</html>
