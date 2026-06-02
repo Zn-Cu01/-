@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赤石4：赤石陨落</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            background-image: url('back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(12, 1fr);
+            gap: 2px;
+            width: 80vmin;
+            height: 80vmin;
+            max-width: 600px;
+            max-height: 600px;
+            background-color: #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .grid-cell {
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .grid-cell:hover {
+            transform: scale(1.05);
+        }
+        .grid-cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        .grid-cell.eliminating {
+            opacity: 0;
+            transform: scale(0.3) rotate(180deg);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .grid-cell.falling {
+            transition: transform 0.8s cubic-bezier(0.215, 0.610, 0.355, 1.000);
+        }
+        
+        /* 标题界面样式 */
+        .title-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            background-image: url('back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 1s ease-in-out;
+        }
+        
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff4500;
+            text-shadow: 0 0 20px #ff4500, 0 0 40px #ff4500, 0 0 60px #ff4500;
+            margin-bottom: 100px;
+            animation: pulse 2s infinite;
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+        
+        .button-container {
+            display: flex;
+            gap: 40px;
+        }
+        
+        .title-button {
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            background-image: url('button.png');
+            background-size: cover;
+            background-position: center;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 15px rgba(255, 69, 0, 0.5);
+        }
+        
+        .title-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 69, 0, 0.8);
+        }
+        
+        .title-button:active {
+            transform: scale(0.95);
+        }
+        
+        .game-container {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes zoomIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .scene-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            background-image: url('back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            animation: fadeIn 1s ease-in-out;
+        }
+        
+        .manual-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 998;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        .victory-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0;
+            background-image: url('back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 997;
+            animation: fadeIn 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- 标题界面 -->
+    <div class="title-screen" id="titleScreen">
+        <h1 class="title">赤石4：赤石陨落</h1>
+        <div class="button-container">
+            <button class="title-button" id="startButton">开始游戏</button>
+            <button class="title-button" id="exitButton">结束游戏</button>
+        </div>
+    </div>
+    
+    <!-- 新场景界面 -->
+    <div class="scene-screen" id="sceneScreen" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-around; width: 100%; height: 100%; padding: 20px;">
+            <img src="1.jpg" alt="白石之神" style="height: 70vmin; max-height: 500px; width: auto; animation: slideInLeft 1.5s ease-out;">
+            <div style="max-width: 40%; text-align: center; animation: fadeIn 2s ease-out;">
+                <p style="font-size: 24px; color: white; text-shadow: 0 0 10px black; margin-bottom: 20px; background-color: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px;">打破幻境之后，只见两个怪物正要开战</p>
+                <p style="font-size: 24px; color: white; text-shadow: 0 0 10px black; margin-bottom: 20px; background-color: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px;">白色的怪物自称白石之神，要讨伐带来毁灭的赤石之神</p>
+                <p style="font-size: 24px; color: white; text-shadow: 0 0 10px black; margin-bottom: 40px; background-color: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px;">帮助白石之神打败赤石之神吧</p>
+                <button class="title-button" id="continueButton" style="margin-top: 20px;">继续</button>
+            </div>
+            <img src="2.jpg" alt="赤石之神" style="height: 70vmin; max-height: 500px; width: auto; animation: slideInRight 1.5s ease-out;">
+        </div>
+    </div>
+    
+    <!-- 玩法说明书 -->
+    <div class="manual-screen" id="manualScreen" style="display: none;">
+        <div style="position: relative; width: 80%; max-width: 800px; background-color: rgba(0,0,0,0.9); color: white; padding: 30px; border-radius: 15px; animation: zoomIn 0.8s ease-out;">
+            <button id="closeManualButton" style="position: absolute; top: 10px; right: 10px; background-color: #ff4500; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 20px; cursor: pointer;">×</button>
+            <h2 style="text-align: center; color: #ff4500; margin-bottom: 20px;">游戏玩法</h2>
+            <div style="line-height: 1.6; font-size: 18px;">
+                <p>1. 点击白色方块开始消除序列</p>
+                <p>2. 按照白→蓝→绿→黄的顺序点击相邻的方块</p>
+                <p>3. 消除红色方块会对赤石之神造成伤害</p>
+                <p>4. 消除非红色方块会对白石之神造成伤害</p>
+                <p>5. 当其中一方生命值为0时，游戏结束</p>
+                <p>6. 点击"刷新棋盘"按钮可以重新排列方块，但会消耗白石之神的生命值</p>
+            </div>
+            <button class="title-button" id="startGameButton" style="margin-top: 30px; display: block; margin-left: auto; margin-right: auto;">开始游戏</button>
+        </div>
+    </div>
+    
+    <!-- 胜利场景 -->
+    <div class="victory-screen" id="victoryScreen" style="display: none;">
+        <div style="text-align: center; animation: fadeIn 1.5s ease-out;">
+            <p style="font-size: 36px; color: #ff4500; text-shadow: 0 0 20px #ff4500, 0 0 40px #ff4500; margin-bottom: 60px; background-color: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; display: inline-block;">赤石已然陨落，未来又在何方</p>
+            <button class="title-button" id="backToTitleButton" style="margin-top: 40px;">返回标题</button>
+        </div>
+    </div>
+    
+    <!-- 游戏界面 -->
+    <div class="game-container" id="gameContainer">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="display: flex; flex-direction: column; align-items: center; margin-left: 0px; transform: translateX(80px);">
+                <div style="width: 50%; background-color: #333; border-radius: 10px; overflow: hidden; margin-bottom: 10px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                    <div id="health1" style="width: 100%; height: 20px; background-color: #4CAF50; transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.5s ease; border-radius: 10px;"></div>
+                    <div id="health1Text" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">100/100</div>
+                </div>
+                <img id="image1" src="1.jpg" alt="左侧图片" style="height: 80vmin; max-height: 600px; width: auto; transition: transform 0.2s ease;">
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="game-board" id="gameBoard"></div>
+                <button id="refreshButton" style="margin-top: 10px; padding: 8px 16px; background-image: url('button.png'); background-size: cover; background-position: center; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">刷新棋盘</button>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; margin-right: 0px; transform: translateX(-80px);">
+                <div style="width: 50%; background-color: #333; border-radius: 10px; overflow: hidden; margin-bottom: 10px; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                    <div id="health2" style="width: 100%; height: 20px; background-color: #4CAF50; transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.5s ease; border-radius: 10px;"></div>
+                    <div id="health2Text" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">100/100</div>
+                </div>
+                <img id="image2" src="2.jpg" alt="右侧图片" style="height: 80vmin; max-height: 600px; width: auto; transition: transform 0.2s ease;">
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 图片路径数组
+        const images = [
+            'write.png',
+            'green.png',
+            'blue.png',
+            'yellow.png',
+            'red.png'
+        ];
+        
+        // 图片名称到索引的映射
+        const imageToIndex = {
+            'write.png': 0,
+            'green.png': 1,
+            'blue.png': 2,
+            'yellow.png': 3,
+            'red.png': 4
+        };
+        
+        // 网格大小
+        const gridSize = 12;
+        
+        // 获取游戏板元素
+        const gameBoard = document.getElementById('gameBoard');
+        
+        // 存储网格状态
+        let grid = [];
+        
+        // 存储点击序列
+        let clickSequence = [];
+        
+        // 有效的消除序列
+        const validSequence = ['write.png', 'blue.png', 'green.png', 'yellow.png'];
+        
+        // 健康值
+        let health1 = 100;
+        let health2 = 100;
+        
+        // 红色图片概率状态
+        let redImageProbability = 0.2; // 默认20%概率
+        
+        // 播放声音函数
+        function playSound(soundFile) {
+            const audio = new Audio(soundFile);
+            audio.play().catch(error => {
+                console.log('播放声音失败:', error);
+            });
+        }
+        
+        // 背景音乐对象
+        let backgroundMusic;
+        
+        // 播放背景音乐
+        function playBackgroundMusic() {
+            backgroundMusic = new Audio('背景音乐.mp3');
+            backgroundMusic.loop = true;
+            backgroundMusic.volume = 0.5; // 设置音量为50%
+            backgroundMusic.play().catch(error => {
+                console.log('播放背景音乐失败:', error);
+                // 尝试通过用户交互触发播放
+                document.addEventListener('click', function playOnClick() {
+                    backgroundMusic.play().catch(error => {
+                        console.log('再次尝试播放背景音乐失败:', error);
+                    });
+                    document.removeEventListener('click', playOnClick);
+                }, { once: true });
+            });
+        }
+        
+        // 检查是否有四个及以上相同图片相邻
+        function hasFourInARow(row, col, image, grid) {
+            // 检查水平方向
+            let count = 1;
+            for (let j = col - 1; j >= 0; j--) {
+                if (grid[row] && grid[row][j] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            for (let j = col + 1; j < gridSize; j++) {
+                if (grid[row] && grid[row][j] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            if (count >= 4) return true;
+            
+            // 检查垂直方向
+            count = 1;
+            for (let i = row - 1; i >= 0; i--) {
+                if (grid[i] && grid[i][col] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            for (let i = row + 1; i < gridSize; i++) {
+                if (grid[i] && grid[i][col] === image) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            if (count >= 4) return true;
+            
+            return false;
+        }
+        
+        // 初始化网格
+        function initGrid() {
+            // 清空游戏板
+            gameBoard.innerHTML = '';
+            grid = [];
+            
+            // 生成网格
+            for (let i = 0; i < gridSize; i++) {
+                grid[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    // 创建格子元素
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // 随机选择一张图片，确保不会出现四个及以上相同图片相邻
+                    let randomImage;
+                    let validImage = false;
+                    
+                    while (!validImage) {
+                        // 根据红色图片概率状态选择图片
+                        const random = Math.random();
+                        if (random < (1 - redImageProbability)) {
+                            // 从非红色图片中选择
+                            const nonRedImages = images.filter(img => img !== 'red.png');
+                            randomImage = nonRedImages[Math.floor(Math.random() * nonRedImages.length)];
+                        } else {
+                            // 选择红色图片
+                            randomImage = 'red.png';
+                        }
+                        validImage = true;
+                        
+                        // 检查是否有四个及以上相同图片相邻
+                        if (hasFourInARow(i, j, randomImage, grid)) {
+                            validImage = false;
+                        }
+                    }
+                    
+                    grid[i][j] = randomImage;
+                    
+                    // 创建图片元素
+                    const img = document.createElement('img');
+                    img.src = randomImage;
+                    img.alt = '游戏图片';
+                    
+                    // 将图片添加到格子中
+                    cell.appendChild(img);
+                    
+                    // 添加点击事件
+                    cell.addEventListener('click', () => handleCellClick(i, j));
+                    
+                    // 将格子添加到游戏板中
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+        
+        // 处理单元格点击
+        function handleCellClick(row, col) {
+            // 播放选中图片声音
+            playSound('按钮（选中石头）-1秒.m4a');
+            
+            const currentImage = grid[row][col];
+            const cell = getCellElement(row, col);
+            
+            // 检查是否是有效的序列
+            if (clickSequence.length === 0) {
+                // 第一个点击必须是白色
+                if (currentImage === 'write.png') {
+                    // 查找所有相邻的白色图片
+                    const whiteCells = findAllAdjacentSameColor(row, col, currentImage);
+                    whiteCells.forEach(item => {
+                        clickSequence.push(item);
+                        const whiteCell = getCellElement(item.row, item.col);
+                        highlightCell(whiteCell);
+                    });
+                }
+            } else {
+                // 确定当前序列中已经包含的颜色种类
+                const includedColors = [...new Set(clickSequence.map(item => item.image))];
+                // 确定当前应该选择的颜色
+                const expectedColorIndex = includedColors.length;
+                const expectedColor = validSequence[expectedColorIndex];
+                
+                // 检查点击的图片是否是当前应该选择的颜色
+                if (currentImage !== expectedColor) {
+                    // 重置序列
+                    resetSequence();
+                    return;
+                }
+                
+                // 检查是否与最后一个选中的同色单元格相邻
+                // 首先找出所有已选中的最后一种颜色的单元格
+                const lastColor = includedColors[includedColors.length - 1];
+                const lastColorCells = clickSequence.filter(item => item.image === lastColor);
+                
+                // 检查是否与任何一个最后颜色的单元格相邻
+                const isAdjacentToLastColor = lastColorCells.some(selected => 
+                    isAdjacent(selected.row, selected.col, row, col)
+                );
+                
+                if (isAdjacentToLastColor) {
+                    // 查找所有相邻的相同颜色图片
+                    const sameColorCells = findAllAdjacentSameColor(row, col, currentImage);
+                    sameColorCells.forEach(item => {
+                        // 确保不重复添加
+                        if (!clickSequence.some(selected => 
+                            selected.row === item.row && selected.col === item.col
+                        )) {
+                            clickSequence.push(item);
+                            const colorCell = getCellElement(item.row, item.col);
+                            highlightCell(colorCell);
+                        }
+                    });
+                    
+                    // 检查是否完成了整个序列
+                    const updatedIncludedColors = [...new Set(clickSequence.map(item => item.image))];
+                    if (updatedIncludedColors.length >= validSequence.length) {
+                        // 检查是否至少有一个白色、蓝色、绿色和黄色图片
+                        const hasWhite = clickSequence.some(item => item.image === 'write.png');
+                        const hasBlue = clickSequence.some(item => item.image === 'blue.png');
+                        const hasGreen = clickSequence.some(item => item.image === 'green.png');
+                        const hasYellow = clickSequence.some(item => item.image === 'yellow.png');
+                        
+                        if (hasWhite && hasBlue && hasGreen && hasYellow) {
+                            eliminateSequence();
+                        }
+                    }
+                } else {
+                    // 重置序列
+                    resetSequence();
+                }
+            }
+        }
+        
+        // 检查两个单元格是否相邻
+        function isAdjacent(row1, col1, row2, col2) {
+            const rowDiff = Math.abs(row1 - row2);
+            const colDiff = Math.abs(col1 - col2);
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+        
+        // 高亮单元格
+        function highlightCell(cell) {
+            cell.style.border = '3px solid #ff0';
+            cell.style.boxShadow = '0 0 10px #ff0';
+            cell.style.transform = 'scale(1.1)';
+            cell.style.transition = 'all 0.3s ease-in-out';
+        }
+        
+        // 重置单元格样式
+        function resetCellStyle(cell) {
+            cell.style.border = '';
+            cell.style.boxShadow = '';
+            cell.style.transform = '';
+            cell.style.transition = 'all 0.3s ease-in-out';
+        }
+        
+        // 重置点击序列
+        function resetSequence() {
+            // 移除所有高亮
+            clickSequence.forEach(item => {
+                const cell = getCellElement(item.row, item.col);
+                resetCellStyle(cell);
+            });
+            clickSequence = [];
+        }
+        
+        // 随机将指定数量的单元格替换为black.png
+        function replaceRandomCellsWithBlack(count) {
+            // 播放转换为black时的声音
+            playSound('转换.m4a');
+            
+            // 收集所有非空且非红色的单元格
+            const allCells = [];
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    if (grid[i][j] && grid[i][j] !== 'red.png') {
+                        allCells.push({ row: i, col: j });
+                    }
+                }
+            }
+            
+            // 随机选择指定数量的单元格
+            const selectedCells = [];
+            while (selectedCells.length < count && allCells.length > 0) {
+                const randomIndex = Math.floor(Math.random() * allCells.length);
+                selectedCells.push(allCells[randomIndex]);
+                allCells.splice(randomIndex, 1);
+            }
+            
+            // 将选中的单元格替换为black.png
+            selectedCells.forEach((cell, index) => {
+                // 添加延迟，使替换效果更有层次感
+                setTimeout(() => {
+                    grid[cell.row][cell.col] = 'black.png';
+                    const cellElement = getCellElement(cell.row, cell.col);
+                    if (cellElement) {
+                        const img = cellElement.querySelector('img');
+                        if (img) {
+                            // 添加替换动画效果
+                            img.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                            img.style.transform = 'scale(1.3) rotate(360deg)';
+                            img.style.opacity = '0.5';
+                            img.style.filter = 'brightness(1.5)';
+                            
+                            // 执行动画
+                            setTimeout(() => {
+                                img.src = 'black.png';
+                                img.style.transform = 'scale(1) rotate(0deg)';
+                                img.style.opacity = '1';
+                                img.style.filter = 'brightness(1)';
+                                // 添加黑色图片的特效
+                                img.style.boxShadow = '0 0 15px rgba(0, 0, 0, 0.8)';
+                                setTimeout(() => {
+                                    img.style.boxShadow = '';
+                                }, 300);
+                            }, 300);
+                        }
+                    }
+                }, index * 150); // 每个单元格的替换延迟150ms，形成序列效果
+            });
+        }
+        
+        // 检查游戏结束
+        function checkGameOver() {
+            if (health2 <= 0) {
+                // 播放游戏胜利声音
+                playSound('胜利（打开大门？）-1秒.m4a');
+                
+                // 游戏获胜，2慢慢消失
+                const image2 = document.getElementById('image2');
+                const healthBar2 = document.querySelector('#health2').parentElement;
+                
+                // 添加消失动画效果
+                image2.style.transition = 'all 1s ease-out';
+                image2.style.opacity = '0';
+                image2.style.transform = 'scale(0.5) translateX(-50px)';
+                
+                healthBar2.style.transition = 'all 1s ease-out';
+                healthBar2.style.opacity = '0';
+                healthBar2.style.transform = 'scale(0.5)';
+                
+                // 显示游戏获胜提示
+                setTimeout(() => {
+                    showGameResult('游戏获胜！', '#4CAF50');
+                    // 进入胜利场景
+                    setTimeout(() => {
+                        document.getElementById('gameContainer').style.display = 'none';
+                        document.getElementById('victoryScreen').style.display = 'flex';
+                    }, 2000);
+                }, 1000);
+                return true;
+            } else if (health1 <= 0) {
+                // 播放游戏失败声音
+                playSound('游戏失败二-3秒.m4a');
+                
+                // 游戏失败，1慢慢消失
+                const image1 = document.getElementById('image1');
+                const healthBar1 = document.querySelector('#health1').parentElement;
+                
+                // 添加消失动画效果
+                image1.style.transition = 'all 1s ease-out';
+                image1.style.opacity = '0';
+                image1.style.transform = 'scale(0.5) translateX(50px)';
+                
+                healthBar1.style.transition = 'all 1s ease-out';
+                healthBar1.style.opacity = '0';
+                healthBar1.style.transform = 'scale(0.5)';
+                
+                // 显示游戏失败提示
+                setTimeout(() => {
+                    showGameResult('游戏失败！', '#f44336');
+                    // 重置游戏
+                    setTimeout(() => {
+                        health1 = 100;
+                        health2 = 100;
+                        updateHealthBars();
+                        initGrid();
+                        // 重置角色和血条的样式
+                        image1.style.opacity = '1';
+                        image1.style.transform = 'scale(1) translateX(80px)';
+                        healthBar1.style.opacity = '1';
+                        healthBar1.style.transform = 'scale(1)';
+                    }, 2000);
+                }, 1000);
+                return true;
+            }
+            return false;
+        }
+        
+        // 显示游戏结果
+        function showGameResult(message, color) {
+            // 创建结果提示元素
+            const resultElement = document.createElement('div');
+            resultElement.style.position = 'fixed';
+            resultElement.style.top = '50%';
+            resultElement.style.left = '50%';
+            resultElement.style.transform = 'translate(-50%, -50%) scale(0)';
+            resultElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            resultElement.style.color = 'white';
+            resultElement.style.padding = '40px 60px';
+            resultElement.style.borderRadius = '15px';
+            resultElement.style.fontSize = '36px';
+            resultElement.style.fontWeight = 'bold';
+            resultElement.style.textAlign = 'center';
+            resultElement.style.zIndex = '1000';
+            resultElement.style.boxShadow = `0 0 30px ${color}`;
+            resultElement.style.border = `3px solid ${color}`;
+            resultElement.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            resultElement.textContent = message;
+            
+            // 添加到页面
+            document.body.appendChild(resultElement);
+            
+            // 执行动画
+            setTimeout(() => {
+                resultElement.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 50);
+            
+            // 移除元素
+            setTimeout(() => {
+                resultElement.style.transform = 'translate(-50%, -50%) scale(0)';
+                resultElement.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(resultElement);
+                }, 600);
+            }, 1400);
+        }
+        
+        // 更新血条
+        function updateHealthBars() {
+            document.getElementById('health1').style.width = `${health1}%`;
+            document.getElementById('health2').style.width = `${health2}%`;
+            
+            // 更新血量数值
+            document.getElementById('health1Text').textContent = `${health1}/100`;
+            document.getElementById('health2Text').textContent = `${health2}/100`;
+            
+            // 根据血量改变颜色
+            if (health1 < 30) {
+                document.getElementById('health1').style.backgroundColor = '#f44336';
+            } else if (health1 < 70) {
+                document.getElementById('health1').style.backgroundColor = '#ff9800';
+            } else {
+                document.getElementById('health1').style.backgroundColor = '#4CAF50';
+            }
+            
+            if (health2 < 30) {
+                document.getElementById('health2').style.backgroundColor = '#f44336';
+            } else if (health2 < 70) {
+                document.getElementById('health2').style.backgroundColor = '#ff9800';
+            } else {
+                document.getElementById('health2').style.backgroundColor = '#4CAF50';
+            }
+            
+            // 检查游戏是否结束
+            checkGameOver();
+        }
+        
+        // 移动图片
+        function moveImage(imageId, direction, distance) {
+            const image = document.getElementById(imageId);
+            // 添加更平滑的动画效果
+            image.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            image.style.transform = `translateX(${direction * distance}px) scale(1.1)`;
+            setTimeout(() => {
+                image.style.transform = 'translateX(0) scale(1)';
+                // 重置过渡效果
+                setTimeout(() => {
+                    image.style.transition = 'transform 0.2s ease';
+                }, 400);
+            }, 200);
+        }
+        
+        // 消除序列
+        function eliminateSequence() {
+            // 播放消除石头声音
+            playSound('消除石头-1秒.m4a');
+            // 延迟播放大怪兽吼叫声音
+            setTimeout(() => {
+                playSound('大怪兽吼叫（有点奇怪）-1秒.m4a');
+            }, 1000);
+            
+            // 收集要消除的单元格
+            const cellsToEliminate = [...clickSequence];
+            
+            // 检查周围的红色图片
+            clickSequence.forEach(item => {
+                const redCells = findAdjacentRed(item.row, item.col);
+                redCells.forEach(redCell => {
+                    // 检查是否已经在消除列表中
+                    if (!cellsToEliminate.some(cell => cell.row === redCell.row && cell.col === redCell.col)) {
+                        cellsToEliminate.push(redCell);
+                    }
+                });
+            });
+            
+            // 计算消除的红色图片数量
+            const redCount = cellsToEliminate.filter(item => item.image === 'red.png').length;
+            
+            // 执行消除动画
+            cellsToEliminate.forEach(item => {
+                const cell = getCellElement(item.row, item.col);
+                cell.classList.add('eliminating');
+            });
+            
+            // 延迟执行下落和填充
+            setTimeout(() => {
+                // 标记要消除的位置
+                const eliminated = Array(gridSize).fill().map(() => Array(gridSize).fill(false));
+                cellsToEliminate.forEach(item => {
+                    eliminated[item.row][item.col] = true;
+                });
+                
+                // 执行下落
+                dropCells(eliminated);
+                
+                // 填充新图片
+                fillNewCells();
+                
+                // 应用新规则
+                if (redCount > 0) {
+                    // 消除了红色图片，2损失血量，1向右移动
+                    const oldHealth2 = health2;
+                    health2 = Math.max(0, health2 - redCount);
+                    moveImage('image1', 1, 30);
+                    
+                    // 当2的血量低于40且2的血量减少时，将红色图片概率设为10%并替换为black.png
+                    if (oldHealth2 < 40 && health2 < oldHealth2) {
+                        redImageProbability = 0.1; // 10%概率
+                        // 先等半秒再替换，添加延迟效果
+                        setTimeout(() => {
+                            replaceRandomCellsWithBlack(2);
+                        }, 500);
+                    }
+                } else {
+                    // 没有消除红色图片，1损失血量，2向左移动
+                    let damage = cellsToEliminate.length;
+                    // 当2的血量低于50时，1受到的伤害翻倍
+                    if (health2 < 50) {
+                        damage *= 2;
+                    }
+                    const oldHealth1 = health1;
+                    health1 = Math.max(0, health1 - damage);
+                    moveImage('image2', -1, 30);
+                    
+                    // 当1的血量减少时，将红色图片概率恢复为20%
+                    if (health1 < oldHealth1) {
+                        redImageProbability = 0.2; // 20%概率
+                    }
+                }
+                
+                // 更新血条
+                updateHealthBars();
+                
+                // 重置序列
+                resetSequence();
+            }, 300);
+        }
+        
+        // 查找相邻的红色图片
+        function findAdjacentRed(row, col) {
+            const redCells = [];
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            directions.forEach(([dr, dc]) => {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                
+                if (isValidPosition(newRow, newCol) && grid[newRow][newCol] === 'red.png') {
+                    redCells.push({ row: newRow, col: newCol, image: 'red.png' });
+                }
+            });
+            
+            return redCells;
+        }
+        
+        // 查找所有相邻的相同颜色图片（使用深度优先搜索）
+        function findAllAdjacentSameColor(row, col, color) {
+            const result = [];
+            const visited = Array(gridSize).fill().map(() => Array(gridSize).fill(false));
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            function dfs(r, c) {
+                if (!isValidPosition(r, c) || visited[r][c] || grid[r][c] !== color) {
+                    return;
+                }
+                
+                visited[r][c] = true;
+                result.push({ row: r, col: c, image: color });
+                
+                directions.forEach(([dr, dc]) => {
+                    dfs(r + dr, c + dc);
+                });
+            }
+            
+            dfs(row, col);
+            return result;
+        }
+        
+        // 检查位置是否有效
+        function isValidPosition(row, col) {
+            return row >= 0 && row < gridSize && col >= 0 && col < gridSize;
+        }
+        
+        // 获取单元格元素
+        function getCellElement(row, col) {
+            return document.querySelector(`.grid-cell[data-row="${row}"][data-col="${col}"]`);
+        }
+        
+        // 执行单元格下落
+        function dropCells(eliminated) {
+            // 按列处理
+            for (let j = 0; j < gridSize; j++) {
+                // 从下往上处理，收集未被消除的图片
+                const columnImages = [];
+                for (let i = gridSize - 1; i >= 0; i--) {
+                    if (!eliminated[i][j]) {
+                        columnImages.push(grid[i][j]);
+                    }
+                }
+                
+                // 从底部开始填充列
+                let currentIndex = 0;
+                for (let i = gridSize - 1; i >= 0; i--) {
+                    if (currentIndex < columnImages.length) {
+                        grid[i][j] = columnImages[currentIndex];
+                        const cell = getCellElement(i, j);
+                        cell.classList.remove('eliminating');
+                        cell.classList.add('falling');
+                        const img = cell.querySelector('img');
+                        img.src = columnImages[currentIndex];
+                        img.style.position = 'relative';
+                        img.style.zIndex = '2';
+                        // 添加下落动画效果
+                        img.style.transform = 'translateY(-100%)';
+                        setTimeout(() => {
+                            img.style.transform = 'translateY(0)';
+                        }, 50);
+                        currentIndex++;
+                    } else {
+                        // 顶部空缺标记为null
+                        grid[i][j] = null;
+                    }
+                }
+                
+                // 移除所有下落动画类
+                setTimeout(() => {
+                    for (let i = 0; i < gridSize; i++) {
+                        const cell = getCellElement(i, j);
+                        if (cell) {
+                            cell.classList.remove('falling');
+                        }
+                    }
+                }, 800);
+            }
+        }
+        
+        // 填充新单元格
+        function fillNewCells() {
+            for (let j = 0; j < gridSize; j++) {
+                for (let i = 0; i < gridSize; i++) {
+                    if (grid[i][j] === null) {
+                        // 根据红色图片概率状态选择图片
+                        let randomImage;
+                        const random = Math.random();
+                        if (random < (1 - redImageProbability)) {
+                            // 从非红色图片中选择
+                            const nonRedImages = images.filter(img => img !== 'red.png');
+                            randomImage = nonRedImages[Math.floor(Math.random() * nonRedImages.length)];
+                        } else {
+                            // 选择红色图片
+                            randomImage = 'red.png';
+                        }
+                        grid[i][j] = randomImage;
+                        
+                        // 更新图片
+                        const cell = getCellElement(i, j);
+                        if (cell) {
+                            // 重置单元格状态
+                            cell.classList.remove('eliminating');
+                            cell.style.opacity = '1';
+                            cell.style.transform = 'scale(1)';
+                            
+                            // 移除所有子元素
+                            cell.innerHTML = '';
+                            
+                            // 创建新的图片元素
+                            const img = document.createElement('img');
+                            img.src = randomImage;
+                            img.alt = '游戏图片';
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+                            img.style.position = 'relative';
+                            img.style.zIndex = '2';
+                            img.style.transition = 'all 0.3s ease';
+                            
+                            // 添加新图片到单元格
+                            cell.appendChild(img);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 刷新棋盘
+        function refreshBoard() {
+            // 播放刷新棋盘声音
+            playSound('刷新棋盘-1秒.m4a');
+            
+            // 收集所有当前图片和位置
+            const allImages = [];
+            const positions = [];
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    allImages.push(grid[i][j]);
+                    positions.push({ row: i, col: j });
+                }
+            }
+            
+            // 打乱图片顺序
+            shuffleArray(allImages);
+            
+            // 1的血量减少20
+            health1 = Math.max(0, health1 - 20);
+            // 更新血条
+            updateHealthBars();
+            
+            // 重新排列图片，添加平移动画效果
+            let index = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    grid[i][j] = allImages[index];
+                    const cell = getCellElement(i, j);
+                    if (cell) {
+                        const img = cell.querySelector('img');
+                        if (img) {
+                            // 计算平移距离
+                            const startRow = positions[index].row;
+                            const startCol = positions[index].col;
+                            const rowDiff = startRow - i;
+                            const colDiff = startCol - j;
+                            const cellWidth = cell.offsetWidth;
+                            const cellHeight = cell.offsetHeight;
+                            
+                            // 设置初始位置
+                            img.src = allImages[index];
+                            img.style.transition = 'all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                            img.style.transform = `translate(${colDiff * cellWidth}px, ${rowDiff * cellHeight}px)`;
+                            img.style.opacity = '0.8';
+                            
+                            // 执行动画
+                            setTimeout(() => {
+                                img.style.transform = 'translate(0, 0)';
+                                img.style.opacity = '1';
+                            }, 50);
+                        }
+                    }
+                    index++;
+                }
+            }
+        }
+        
+        // 打乱数组
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // 标题界面按钮事件
+        document.getElementById('startButton').addEventListener('click', function() {
+            document.getElementById('titleScreen').style.display = 'none';
+            document.getElementById('sceneScreen').style.display = 'flex';
+        });
+        
+        document.getElementById('exitButton').addEventListener('click', function() {
+            window.close();
+        });
+        
+        // 新场景继续按钮
+        document.getElementById('continueButton').addEventListener('click', function() {
+            document.getElementById('sceneScreen').style.display = 'none';
+            document.getElementById('manualScreen').style.display = 'flex';
+        });
+        
+        // 关闭说明书按钮
+        document.getElementById('closeManualButton').addEventListener('click', function() {
+            document.getElementById('manualScreen').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            initGrid();
+            playBackgroundMusic();
+        });
+        
+        // 开始游戏按钮
+        document.getElementById('startGameButton').addEventListener('click', function() {
+            document.getElementById('manualScreen').style.display = 'none';
+            document.getElementById('gameContainer').style.display = 'block';
+            initGrid();
+            playBackgroundMusic();
+        });
+        
+        // 返回标题按钮
+        document.getElementById('backToTitleButton').addEventListener('click', function() {
+            document.getElementById('victoryScreen').style.display = 'none';
+            document.getElementById('titleScreen').style.display = 'flex';
+            // 重置游戏状态
+            health1 = 100;
+            health2 = 100;
+            updateHealthBars();
+            // 重置角色和血条的样式
+            const image1 = document.getElementById('image1');
+            const image2 = document.getElementById('image2');
+            const healthBar1 = document.querySelector('#health1').parentElement;
+            const healthBar2 = document.querySelector('#health2').parentElement;
+            
+            image1.style.opacity = '1';
+            image1.style.transform = 'scale(1) translateX(80px)';
+            image2.style.opacity = '1';
+            image2.style.transform = 'scale(1) translateX(-80px)';
+            healthBar1.style.opacity = '1';
+            healthBar1.style.transform = 'scale(1)';
+            healthBar2.style.opacity = '1';
+            healthBar2.style.transform = 'scale(1)';
+        });
+        
+        // 添加刷新按钮点击事件
+        document.getElementById('refreshButton').addEventListener('click', refreshBoard);
+    </script>
+</body>
+</html>
