@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华容道游戏测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('back.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .game-container {
+            background-color: transparent;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 36px;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            font-size: 24px;
+        }
+        
+        .board {
+            display: grid;                /* 将棋盘设置为grid布局，用于创建网格结构 */
+            grid-template-columns: repeat(5, 120px);  /* 定义5列，每列宽度为120px */
+            grid-template-rows: repeat(4, 120px);     /* 定义4行，每行高度为120px */
+            gap: 0;                       /* 设置网格之间的间隙为0 */
+            background-color: #f0f0f0;    /* 设置棋盘的背景颜色为浅灰色 */
+            margin: 0 auto 40px;          /* 设置棋盘的外边距，水平居中，底部外边距为40px */
+            padding: 0;                   /* 设置棋盘的内边距为0 */
+            border-radius: 0px;          /* 设置棋盘的圆角为0px */
+            position: relative;            /* 设置棋盘的定位方式为相对定位，用于子元素的绝对定位 */
+            width: 630px;                 /* 设置棋盘的宽度为630px（5列 × 120px/列 ） */
+            height: 510px;                /* 设置棋盘的高度为510px（4行 × 120px/行 ） */
+            border: 15px solid #8B4513;    /* 设置棋盘的边框为15px宽的棕色边框 */
+            border-image: url('wall.png') 30 round; /* 使用wall.png图片作为边框 */
+            box-sizing: content-box;       /* 设置盒模型为content-box，使边框和内边距不影响元素的宽度和高度计算 */
+        }
+        
+        .board::before {
+            content: '';
+            position: absolute;
+            bottom: -200px;
+            left: 185px;
+            width: 140px;
+            height: 170px;
+            background-image: url('door2.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 0;
+            z-index: 1;
+        }
+        
+        .board::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 135px;
+            width: 240px;
+            height: 15px;
+            background-image: url('door.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 0;
+            z-index: 2;
+        }
+        
+        .cell {
+            width: 120px;
+            height: 120px;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+        }
+        
+        .piece {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: transform 0.2s ease;
+            z-index: 10;
+        }
+        
+        .piece:hover {
+            opacity: 0.8;
+        }
+        
+        .piece.cao-cao {
+            background-image: url('III.png');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            width: 240px;
+            height: 240px;
+        }
+        
+        .piece.general {
+            color: white;
+        }
+        
+        .piece.general.horizontal {
+            background-image: url('2.png');
+            background-size: cover;
+            background-position: center;
+            width: 240px;
+            height: 120px;
+        }
+        
+        .piece.general.vertical {
+            background-image: url('1.png');
+            background-size: cover;
+            background-position: center;
+            width: 120px;
+            height: 240px;
+        }
+        
+        .piece.soldier {
+            background-image: url('3.png');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        button {
+            padding: 20px 40px;
+            margin: 0 10px;
+            background-image: url('button.png');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        
+        button:hover {
+            opacity: 0.8;
+        }
+        
+        .level-selector {
+            margin: 30px 0;
+        }
+        
+        select {
+            padding: 16px;
+            font-size: 20px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+        
+        .message {
+            margin-top: 40px;
+            padding: 20px;
+            border-radius: 0;
+            font-weight: bold;
+            font-size: 20px;
+            color: white;
+            z-index: 100;
+            position: relative;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .message.show {
+            opacity: 1;
+            background-image: url('buttonlong.png');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .message.success {
+            color: white;
+            z-index: 100;
+            position: relative;
+        }
+        
+        .message.info {
+            color: white;
+            z-index: 100;
+            position: relative;
+        }
+        
+        /* 开始界面样式 */
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-image: url('back.png');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .start-screen h1 {
+            color: #8B0000;
+            font-size: 64px;
+            margin-bottom: 80px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .start-button {
+            padding: 24px 60px;
+            background-image: url('button.png');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            border-radius: 0;
+        }
+        
+        .start-button:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+        
+        /* 剧情场景样式 */
+        .story-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            transition: background-image 1s ease-in-out;
+        }
+        
+        .story-content {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 40px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            max-width: 80%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+        
+        .story-content.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .story-content.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        /* 通关场景样式 */
+        .end-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-image: url('p2.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        
+        .end-content {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 40px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            max-width: 80%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+        
+        .end-content.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div class="start-screen" id="start-screen">
+        <h1>赤石1：赤石天降</h1>
+        <div class="start-button" onclick="startGame()">开始游戏</div>
+        <div class="start-button" onclick="exitGame()">退出游戏</div>
+    </div>
+    
+    <!-- 剧情场景 -->
+    <div class="story-screen" id="story-screen" style="display: none;">
+        <div class="story-content" id="story-content"></div>
+    </div>
+    
+    <!-- 通关场景 -->
+    <div class="end-screen" id="end-screen" style="display: none;">
+        <div class="end-content" id="end-content"></div>
+    </div>
+    
+    <!-- 游戏界面 -->
+    <div class="game-container" id="game-container" style="display: none;">
+        
+        
+        
+        
+        <div class="board" id="board">
+            <!-- 棋盘格子将通过JavaScript生成 -->
+        </div>
+        
+        <div class="message" id="message"></div>
+    </div>
+    
+    <!-- 背景音乐 -->
+    <script>
+        // 使用Web Audio API生成背景音乐
+        function createBackgroundMusic() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 创建主振荡器（舒缓主旋律）
+            const mainOscillator = audioContext.createOscillator();
+            mainOscillator.type = 'sine'; // 正弦波更纯净、舒缓
+            mainOscillator.frequency.setValueAtTime(261.63, audioContext.currentTime); // C4 - 适中的音调
+            
+            // 创建和声振荡器（增加和谐感）
+            const harmonyOscillator = audioContext.createOscillator();
+            harmonyOscillator.type = 'sine'; // 正弦波更纯净
+            harmonyOscillator.frequency.setValueAtTime(329.63, audioContext.currentTime); // E4 - 和谐的三度音
+            
+            // 创建氛围振荡器（制造空间感）
+            const atmosphereOscillator = audioContext.createOscillator();
+            atmosphereOscillator.type = 'sine'; // 正弦波更纯净
+            atmosphereOscillator.frequency.setValueAtTime(130.81, audioContext.currentTime); // C3 - 低八度氛围音
+            
+            // 创建低频振荡器用于音量变化
+            const lfo = audioContext.createOscillator();
+            lfo.type = 'sine'; // 正弦波更平滑
+            lfo.frequency.setValueAtTime(0.1, audioContext.currentTime); // 0.1Hz 缓慢的呼吸效果
+            
+            // 创建音量增益节点
+            const mainGain = audioContext.createGain();
+            const harmonyGain = audioContext.createGain();
+            const atmosphereGain = audioContext.createGain();
+            const masterGain = audioContext.createGain();
+            
+            // 设置初始音量
+            mainGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+            harmonyGain.gain.setValueAtTime(0.12, audioContext.currentTime);
+            atmosphereGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+            masterGain.gain.setValueAtTime(0.25, audioContext.currentTime);
+            
+            // 创建滤波器增加氛围感
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2000, audioContext.currentTime); // 较高的截止频率，更开放
+            filter.Q.setValueAtTime(1.0, audioContext.currentTime); // 适度的共振
+            
+            // 创建混响效果（增加空间感）
+            const reverb = audioContext.createConvolver();
+            // 创建一个更柔和的混响缓冲区
+            const createReverbBuffer = () => {
+                const length = audioContext.sampleRate * 3; // 3秒混响
+                const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < length; i++) {
+                    // 更缓慢的指数衰减，增加空间感
+                    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 3);
+                }
+                return buffer;
+            };
+            reverb.buffer = createReverbBuffer();
+            
+            // 创建延迟效果（增强空间感）
+            const delay = audioContext.createDelay(2.0);
+            delay.delayTime.setValueAtTime(1.2, audioContext.currentTime); // 更长的延迟
+            const delayGain = audioContext.createGain();
+            delayGain.gain.setValueAtTime(0.2, audioContext.currentTime); // 更柔和的延迟
+            
+            // 连接节点
+            lfo.connect(mainGain.gain); // 控制主音量的呼吸效果
+            
+            mainOscillator.connect(mainGain);
+            harmonyOscillator.connect(harmonyGain);
+            atmosphereOscillator.connect(atmosphereGain);
+            
+            mainGain.connect(filter);
+            harmonyGain.connect(filter);
+            atmosphereGain.connect(filter);
+            
+            // 主信号路径
+            filter.connect(masterGain);
+            
+            // 混响路径
+            filter.connect(reverb);
+            reverb.connect(masterGain);
+            
+            // 延迟路径
+            filter.connect(delay);
+            delay.connect(delayGain);
+            delayGain.connect(masterGain);
+            
+            masterGain.connect(audioContext.destination);
+            
+            // 开始播放
+            mainOscillator.start();
+            harmonyOscillator.start();
+            atmosphereOscillator.start();
+            lfo.start();
+            
+            // 舒缓优美的旋律变化
+            const createMelody = (time) => {
+                // 第一部分：基础和谐音调
+                mainOscillator.frequency.exponentialRampToValueAtTime(261.63, time); // C4
+                harmonyOscillator.frequency.exponentialRampToValueAtTime(329.63, time); // E4
+                atmosphereOscillator.frequency.exponentialRampToValueAtTime(130.81, time); // C3
+                
+                // 第二部分：上升的优美旋律
+                mainOscillator.frequency.exponentialRampToValueAtTime(293.66, time + 3); // D4
+                harmonyOscillator.frequency.exponentialRampToValueAtTime(369.99, time + 3); // F#4
+                atmosphereOscillator.frequency.exponentialRampToValueAtTime(146.83, time + 3); // D3
+                
+                // 第三部分：和谐的高音
+                mainOscillator.frequency.exponentialRampToValueAtTime(329.63, time + 6); // E4
+                harmonyOscillator.frequency.exponentialRampToValueAtTime(440.00, time + 6); // A4
+                atmosphereOscillator.frequency.exponentialRampToValueAtTime(164.81, time + 6); // E3
+                
+                // 第四部分：回落
+                mainOscillator.frequency.exponentialRampToValueAtTime(293.66, time + 9); // D4
+                harmonyOscillator.frequency.exponentialRampToValueAtTime(369.99, time + 9); // F#4
+                atmosphereOscillator.frequency.exponentialRampToValueAtTime(146.83, time + 9); // D3
+                
+                // 第五部分：回到和谐基础
+                mainOscillator.frequency.exponentialRampToValueAtTime(261.63, time + 12); // C4
+                harmonyOscillator.frequency.exponentialRampToValueAtTime(329.63, time + 12); // E4
+                atmosphereOscillator.frequency.exponentialRampToValueAtTime(130.81, time + 12); // C3
+                
+                // 重复整个旋律
+                setTimeout(() => {
+                    createMelody(audioContext.currentTime);
+                }, 14000); // 更长的周期，更舒缓
+            };
+            
+            // 开始旋律
+            createMelody(audioContext.currentTime);
+            
+            return { mainOscillator, harmonyOscillator, atmosphereOscillator, lfo };
+        }
+        
+        // 背景音乐初始化已移至setupBackgroundMusic函数中
+    </script>
+    
+    <div class="controls">
+        <button onclick="resetGame()">重新开始</button>
+        <button onclick="undoMove()">撤销</button>
+        <button onclick="returnToTitle()">返回标题</button>
+    </div>
+    
+    <script>
+        // 初始棋子位置
+        const initialPieces = [
+            { type: 'cao-cao', x: 1, y: 0, width: 2, height: 2, label: '' },
+            { type: 'general', x: 0, y: 0, width: 1, height: 2, label: '', orientation: 'vertical' },
+            { type: 'general', x: 3, y: 0, width: 1, height: 2, label: '', orientation: 'vertical' },
+            { type: 'general', x: 1, y: 2, width: 2, height: 1, label: '', orientation: 'horizontal' },
+            { type: 'soldier', x: 0, y: 2, width: 1, height: 1, label: '' },
+            { type: 'soldier', x: 3, y: 2, width: 1, height: 1, label: '' },
+            { type: 'soldier', x: 0, y: 3, width: 1, height: 1, label: '' },
+            { type: 'soldier', x: 1, y: 3, width: 1, height: 1, label: '' },
+            { type: 'soldier', x: 2, y: 3, width: 1, height: 1, label: '' },
+            { type: 'soldier', x: 3, y: 3, width: 1, height: 1, label: '' }
+        ];
+        
+        // 游戏状态
+        let gameState = {
+            board: Array(4).fill().map(() => Array(5).fill(null)),
+            pieces: JSON.parse(JSON.stringify(initialPieces)),
+            history: [],
+            selectedPiece: null,
+            canleave: 1
+        };
+        
+        // 初始化棋盘
+        function initBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    board.appendChild(cell);
+                }
+            }
+        }
+        
+        // 更新棋盘
+        function updateBoard() {
+            const board = document.getElementById('board');
+            
+            // 清除现有棋子
+            const existingPieces = board.querySelectorAll('.piece');
+            existingPieces.forEach(piece => piece.remove());
+            
+            // 清除现有出口标志
+            const existingExit = board.querySelector('.exit');
+            if (existingExit) {
+                existingExit.remove();
+            }
+            
+            // 清除现有钥匙图标
+            const existingKey = board.querySelector('.key');
+            if (existingKey) {
+                existingKey.remove();
+            }
+            
+            // 检查曹操是否在钥匙位置
+            const caoCao = gameState.pieces.find(piece => piece.type === 'cao-cao');
+            // 只要曹操的任何一部分碰到钥匙就算
+            const isCaoCaoOnKey = caoCao && !(caoCao.x > 3 || caoCao.x + caoCao.width <= 3 || caoCao.y > 2 || caoCao.y + caoCao.height <= 2);
+            
+            // 如果曹操碰到钥匙且还没找到钥匙，标记为找到钥匙
+            if (isCaoCaoOnKey && gameState.canleave === 1) {
+                showMessage('发现了钥匙！', 'info');
+                gameState.canleave = 0;
+                // 播放找到钥匙音效
+                const audio = new Audio('找到钥匙-1秒.m4a');
+                audio.play();
+            }
+            
+            // 只有当还没找到钥匙时才显示钥匙图标
+            if (gameState.canleave === 1) {
+                const keyElement = document.createElement('div');
+                keyElement.className = 'key';
+                keyElement.style.position = 'absolute';
+                keyElement.style.left = `${15 + 3 * 120}px`;
+                keyElement.style.top = `${15 + 2 * 120}px`;
+                keyElement.style.width = '120px';
+                keyElement.style.height = '120px';
+                keyElement.style.zIndex = '1';
+                keyElement.style.backgroundImage = 'url("4.png")';
+                keyElement.style.backgroundSize = 'cover';
+                keyElement.style.backgroundPosition = 'center';
+                board.appendChild(keyElement);
+            }
+            
+            // 清除现有锁图标
+            const existingLock = board.querySelector('.lock');
+            if (existingLock) {
+                existingLock.remove();
+            }
+            
+            // 添加锁图标（如果曹操还没找到钥匙）
+            if (gameState.canleave === 1) {
+                const lockElement = document.createElement('div');
+                lockElement.className = 'lock';
+                lockElement.style.position = 'absolute';
+                lockElement.style.left = `${15 + 1 * 120 + 90}px`;
+                lockElement.style.top = `${15 + 2 * 120 + 255}px`;
+                lockElement.style.width = '60px';
+                lockElement.style.height = '30px';
+                lockElement.style.zIndex = '1';
+                lockElement.style.backgroundImage = 'url("lock.jpg")';
+                lockElement.style.backgroundSize = 'cover';
+                lockElement.style.backgroundPosition = 'center';
+                board.appendChild(lockElement);
+            }
+            
+            // 重置棋盘状态
+            gameState.board = Array(4).fill().map(() => Array(5).fill(null));
+            
+            // 添加新棋子
+            gameState.pieces.forEach((piece, index) => {
+                const pieceElement = document.createElement('div');
+                pieceElement.className = `piece ${piece.type}`;
+                
+                if (piece.type === 'general') {
+                    pieceElement.classList.add(piece.orientation);
+                }
+                
+                pieceElement.textContent = piece.label;
+                pieceElement.style.left = `${15 + piece.x * 120}px`;
+                pieceElement.style.top = `${15 + piece.y * 120}px`;
+                pieceElement.dataset.index = index;
+                
+                pieceElement.addEventListener('click', () => selectPiece(index));
+                pieceElement.addEventListener('mousedown', startDrag);
+                
+                board.appendChild(pieceElement);
+                
+                // 更新棋盘状态
+                for (let y = piece.y; y < piece.y + piece.height; y++) {
+                    for (let x = piece.x; x < piece.x + piece.width; x++) {
+                        if (y < 4 && x < 5) {
+                            gameState.board[y][x] = index;
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 选择棋子
+        function selectPiece(index) {
+            gameState.selectedPiece = index;
+        }
+        
+        // 开始拖动
+        function startDrag(e) {
+            const pieceIndex = parseInt(e.target.dataset.index);
+            gameState.selectedPiece = pieceIndex;
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const piece = gameState.pieces[pieceIndex];
+            
+            function onMouseMove(e) {
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                // 计算移动方向
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // 水平移动
+                    if (deltaX > 30) {
+                        movePiece(pieceIndex, 1, 0);
+                        document.removeEventListener('mousemove', onMouseMove);
+                    } else if (deltaX < -30) {
+                        movePiece(pieceIndex, -1, 0);
+                        document.removeEventListener('mousemove', onMouseMove);
+                    }
+                } else {
+                    // 垂直移动
+                    if (deltaY > 30) {
+                        movePiece(pieceIndex, 0, 1);
+                        document.removeEventListener('mousemove', onMouseMove);
+                    } else if (deltaY < -30) {
+                        movePiece(pieceIndex, 0, -1);
+                        document.removeEventListener('mousemove', onMouseMove);
+                    }
+                }
+            }
+            
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+        
+        // 移动棋子
+        function movePiece(index, dx, dy) {
+            const piece = gameState.pieces[index];
+            const newX = piece.x + dx;
+            const newY = piece.y + dy;
+            
+            // 检查移动是否合法
+            if (isValidMove(index, newX, newY)) {
+                // 保存历史记录
+                gameState.history.push(JSON.parse(JSON.stringify(gameState.pieces)));
+                
+                // 更新棋子位置
+                piece.x = newX;
+                piece.y = newY;
+                
+                // 播放移动棋子音效
+                const audio = new Audio('移动棋子-1秒.m4a');
+                audio.play();
+                
+                // 更新棋盘
+                updateBoard();
+                
+                // 检查是否胜利
+                checkWin();
+            }
+        }
+        
+        // 检查移动是否合法
+        function isValidMove(index, newX, newY) {
+            const piece = gameState.pieces[index];
+            
+            // 检查边界
+            if (newX < 0 || newY < 0 || newX + piece.width > 5 || newY + piece.height > 4) {
+                return false;
+            }
+            
+            // 检查是否与其他棋子重叠
+            for (let y = newY; y < newY + piece.height; y++) {
+                for (let x = newX; x < newX + piece.width; x++) {
+                    if (gameState.board[y][x] !== null && gameState.board[y][x] !== index) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        // 检查是否胜利
+        function checkWin() {
+            const caoCao = gameState.pieces.find(piece => piece.type === 'cao-cao');
+            if (caoCao && caoCao.x === 1 && caoCao.y === 2) {
+                // 曹操到达出口位置
+                if (gameState.canleave === 1) {
+                    // 还没找到钥匙
+                    showMessage('还没找到钥匙呢', 'info');
+                    // 播放啊哦音效
+                    const audio = new Audio('啊哦-1秒.m4a');
+                    audio.play();
+                } else {
+                    // 找到了钥匙，获胜
+                    showMessage('恭喜你获胜了！', 'success');
+                    // 播放胜利音效
+                    const audio = new Audio('胜利（打开大门？）-1秒.m4a');
+                    audio.play();
+                    
+                    // 延迟显示通关场景
+                    setTimeout(showEndScene, 2000);
+                }
+            }
+        }
+        
+        // 显示通关场景
+        function showEndScene() {
+            // 隐藏游戏界面
+            document.getElementById('game-container').style.display = 'none';
+            
+            // 显示通关场景
+            const endScreen = document.getElementById('end-screen');
+            const endContent = document.getElementById('end-content');
+            
+            endScreen.style.display = 'flex';
+            
+            // 设置文字内容
+            endContent.textContent = '然而，门的后面，又会有什么在等待着我呢';
+            
+            // 淡入效果
+            setTimeout(() => {
+                endContent.classList.add('fade-in');
+                
+                // 延迟返回开始界面
+                setTimeout(() => {
+                    // 隐藏通关场景
+                    endScreen.style.display = 'none';
+                    
+                    // 显示开始界面
+                    document.getElementById('start-screen').style.display = 'flex';
+                    
+                    // 重置游戏状态
+                    gameState.history = [];
+                    gameState.selectedPiece = null;
+                    gameState.canleave = 1;
+                    gameState.pieces = JSON.parse(JSON.stringify(initialPieces));
+                }, 3000);
+            }, 100);
+        }
+        
+        // 重置游戏
+        function resetGame() {
+            playButtonSound();
+            console.log('重置游戏');
+            gameState.history = [];
+            gameState.selectedPiece = null;
+            gameState.canleave = 1;
+            gameState.pieces = JSON.parse(JSON.stringify(initialPieces));
+            updateBoard();
+            document.getElementById('message').textContent = '';
+            document.getElementById('message').className = 'message';
+        }
+        
+        // 撤销移动
+        function undoMove() {
+            playButtonSound();
+            if (gameState.history.length > 0) {
+                gameState.pieces = gameState.history.pop();
+                updateBoard();
+            }
+        }
+        
+        // 播放按钮音效
+        function playButtonSound() {
+            const audio = new Audio('按钮-1秒.m4a');
+            audio.play();
+        }
+        
+        // 显示消息
+        function showMessage(text, type) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                message.textContent = '';
+                message.className = 'message';
+            }, 2000);
+        }
+        
+        // 初始化游戏
+        function initGame() {
+            console.log('开始初始化游戏');
+            initBoard();
+            console.log('棋盘初始化完成');
+            updateBoard();
+            console.log('游戏初始化完成');
+            
+            
+        }
+        
+        // 开始游戏
+        function startGame() {
+            // 播放按钮音效
+            playButtonSound();
+            
+            // 隐藏开始界面
+            document.getElementById('start-screen').style.display = 'none';
+            
+            // 显示剧情场景
+            document.getElementById('story-screen').style.display = 'flex';
+            
+            // 播放剧情
+            playStory();
+        }
+        
+        // 播放剧情
+        function playStory() {
+            const storyScreen = document.getElementById('story-screen');
+            const storyContent = document.getElementById('story-content');
+            
+            // 剧情步骤
+            const storySteps = [
+                {
+                    background: 'p1.png',
+                    text: '那一天，赤石从天而降，带来末日与灾难'
+                },
+                {
+                    background: 'p3.png',
+                    text: '我于昏迷中醒来，只听得喃喃的低语'
+                },
+                {
+                    background: 'p3.png',
+                    text: '哥布林手捧红石，低声祷告'
+                },
+                {
+                    background: 'p3.png',
+                    text: '门缝中透过一丝光亮，我要去往那里'
+                }
+            ];
+            
+            let currentStep = 0;
+            
+            function nextStep() {
+                if (currentStep < storySteps.length) {
+                    const step = storySteps[currentStep];
+                    
+                    // 切换背景图片
+                    storyScreen.style.backgroundImage = `url('${step.background}')`;
+                    
+                    // 更新文字
+                    storyContent.textContent = step.text;
+                    
+                    // 重置动画
+                    storyContent.className = 'story-content';
+                    
+                    // 触发重排
+                    void storyContent.offsetWidth;
+                    
+                    // 淡入效果
+                    storyContent.classList.add('fade-in');
+                    
+                    // 延迟进入下一步
+                    setTimeout(() => {
+                        // 淡出效果
+                        storyContent.classList.remove('fade-in');
+                        storyContent.classList.add('fade-out');
+                        
+                        // 延迟进入下一步
+                        setTimeout(() => {
+                            currentStep++;
+                            nextStep();
+                        }, 1000);
+                    }, 3000);
+                } else {
+                    // 剧情结束，进入游戏
+                    setTimeout(() => {
+                        // 隐藏剧情场景
+                        storyScreen.style.display = 'none';
+                        
+                        // 显示游戏界面
+                        document.getElementById('game-container').style.display = 'block';
+                        
+                        // 初始化游戏
+                        initGame();
+                    }, 500);
+                }
+            }
+            
+            // 开始剧情
+            nextStep();
+        }
+        
+        // 返回标题界面
+        function returnToTitle() {
+            // 播放按钮音效
+            playButtonSound();
+            
+            // 隐藏游戏界面
+            document.getElementById('game-container').style.display = 'none';
+            
+            // 显示开始界面
+            document.getElementById('start-screen').style.display = 'flex';
+            
+            // 重置游戏状态
+            gameState.history = [];
+            gameState.selectedPiece = null;
+            gameState.canleave = 1;
+            gameState.pieces = JSON.parse(JSON.stringify(initialPieces));
+        }
+        
+        // 退出游戏
+        function exitGame() {
+            // 播放按钮音效
+            playButtonSound();
+            
+            // 关闭当前窗口
+            window.close();
+        }
+        
+        // 页面加载完成后显示开始界面
+        window.onload = function() {
+            console.log('页面加载完成，显示开始界面');
+        };
+        
+        // 键盘控制
+        window.addEventListener('keydown', (e) => {
+            if (gameState.selectedPiece !== null) {
+                switch (e.key) {
+                    case 'ArrowUp':
+                        movePiece(gameState.selectedPiece, 0, -1);
+                        break;
+                    case 'ArrowDown':
+                        movePiece(gameState.selectedPiece, 0, 1);
+                        break;
+                    case 'ArrowLeft':
+                        movePiece(gameState.selectedPiece, -1, 0);
+                        break;
+                    case 'ArrowRight':
+                        movePiece(gameState.selectedPiece, 1, 0);
+                        break;
+                }
+            }
+        });
+    </script>
+    
+    <!-- 背景音乐 -->
+    <audio id="backgroundMusic" src="背景音.m4a" loop>
+        您的浏览器不支持音频元素。
+     </audio>
+    
+    <script>
+        // 处理浏览器自动播放限制
+        function playBackgroundMusic() {
+            const audio = document.getElementById('backgroundMusic');
+            audio.play().catch(error => {
+                console.log('自动播放被阻止，等待用户交互后播放:', error);
+                // 监听用户交互事件
+                document.addEventListener('click', function handleClick() {
+                    audio.play();
+                    // 移除事件监听器
+                    document.removeEventListener('click', handleClick);
+                }, { once: true });
+            });
+        }
+        
+        // 页面加载完成后尝试播放背景音乐
+        window.addEventListener('load', playBackgroundMusic);
+    </script>
+</body>
+</html>
